@@ -1,5 +1,5 @@
-const http = require("http"),
-    https = require("https");
+const http = require("node:http");
+const https = require("node:https");
 
 http.createServer(function (req, res) {
     const origin = req.headers["proxy_wgu_origin"];
@@ -10,13 +10,15 @@ http.createServer(function (req, res) {
         res.end("hello");
         return;
     }
-
     const newUrl = new URL(origin);
-    delete req.headers["proxy_wgu_origin"];
-    req.headers.host = newUrl.host;
-    const proxyReq = (newUrl.protocol === "https" ? https : http).request(newUrl.toString(), {
+    const headers = { ...req.headers };
+    delete headers["proxy_wgu_origin"];
+    delete headers["x-forwarded-for"];
+    delete headers["x-forwarded-proto"];
+    headers.host = newUrl.host;
+    const proxyReq = (newUrl.protocol === "https:" ? https : http).request(newUrl.toString(), {
         method: req.method,
-        headers: req.headers,
+        headers,
     }, proxyRes => {
         res.writeHead(proxyRes.statusCode, proxyRes.headers);
         proxyRes.pipe(res);
@@ -25,6 +27,6 @@ http.createServer(function (req, res) {
     proxyReq.on("error", error => {
         res.end();
     });
-}).listen(process.env.PORT || 3000);
+}).listen(process.env.port || 3000);
 
 
